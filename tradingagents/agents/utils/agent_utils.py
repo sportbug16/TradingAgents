@@ -18,6 +18,7 @@ from tradingagents.agents.utils.news_data_tools import (
     get_insider_transactions,
     get_global_news
 )
+from tradingagents.india.context import build_indian_market_context
 
 
 def get_language_instruction() -> str:
@@ -36,11 +37,15 @@ def get_language_instruction() -> str:
 
 def build_instrument_context(ticker: str) -> str:
     """Describe the exact instrument so agents preserve exchange-qualified tickers."""
-    return (
+    context = (
         f"The instrument to analyze is `{ticker}`. "
         "Use this exact ticker in every tool call, report, and recommendation, "
         "preserving any exchange suffix (e.g. `.TO`, `.L`, `.HK`, `.T`)."
     )
+    indian_context = build_indian_market_context(ticker)
+    if indian_context:
+        context = f"{context} {indian_context}"
+    return context
 
 def create_msg_delete():
     def delete_messages(state):

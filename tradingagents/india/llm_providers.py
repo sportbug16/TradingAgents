@@ -1,0 +1,43 @@
+"""LLM provider labels used by India batch screening scripts."""
+
+from __future__ import annotations
+
+
+PROVIDER_DEFAULTS = {
+    "anthropic": {
+        "key_env": "ANTHROPIC_API_KEY",
+        "llm_provider": "anthropic",
+        "quick_model": "claude-opus-4-6",
+        "deep_model": "claude-opus-4-6",
+        "extra": {"anthropic_effort": "medium"},
+        "wall_timeout_seconds": 30 * 60,
+    },
+    "google": {
+        "key_env": "GOOGLE_API_KEY",
+        "llm_provider": "google",
+        "quick_model": "gemini-2.5-flash",
+        "deep_model": "gemini-2.5-flash",
+        "extra": {"google_thinking_level": "minimal"},
+        "wall_timeout_seconds": 20 * 60,
+    },
+    "openrouter-openai-4o-mini": {
+        "key_env": "OPENROUTER_API_KEY",
+        "llm_provider": "openrouter",
+        "quick_model": "openai/gpt-4o-mini",
+        "deep_model": "openai/gpt-4o-mini",
+        "extra": {},
+        "wall_timeout_seconds": 15 * 60,
+    },
+    "openrouter-deepseek-v4": {
+        "key_env": "OPENROUTER_API_KEY",
+        "llm_provider": "openrouter",
+        "quick_model": "deepseek/deepseek-v4-pro",
+        "deep_model": "deepseek/deepseek-v4-pro",
+        "extra": {},
+        "wall_timeout_seconds": 30 * 60,
+    },
+}
+
+
+def provider_labels(value: str) -> list[str]:
+    return [p.strip().lower() for p in value.split(",") if p.strip()]

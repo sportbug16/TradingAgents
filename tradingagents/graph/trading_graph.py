@@ -25,6 +25,7 @@ from tradingagents.agents.utils.agent_states import (
     RiskDebateState,
 )
 from tradingagents.dataflows.config import set_config
+from tradingagents.india.market import IndianInstrumentRegistry, is_indian_ticker
 
 # Import the new abstract tool methods from agent_utils
 from tradingagents.agents.utils.agent_utils import (
@@ -135,6 +136,11 @@ class TradingAgentsGraph:
         kwargs = {}
         provider = self.config.get("llm_provider", "").lower()
 
+        if self.config.get("llm_timeout") is not None:
+            kwargs["timeout"] = self.config["llm_timeout"]
+        if self.config.get("llm_max_retries") is not None:
+            kwargs["max_retries"] = self.config["llm_max_retries"]
+
         if provider == "google":
             thinking_level = self.config.get("google_thinking_level")
             if thinking_level:
@@ -198,26 +204,27 @@ class TradingAgentsGraph:
         or network error).
         """
         try:
+            price_symbol, benchmark_symbol = TradingAgentsGraph._return_symbols(self, ticker)
             start = datetime.strptime(trade_date, "%Y-%m-%d")
             end = start + timedelta(days=holding_days + 7)  # buffer for weekends/holidays
             end_str = end.strftime("%Y-%m-%d")
 
-            stock = yf.Ticker(ticker).history(start=trade_date, end=end_str)
-            spy = yf.Ticker("SPY").history(start=trade_date, end=end_str)
+            stock = yf.Ticker(price_symbol).history(start=trade_date, end=end_str)
+            benchmark = yf.Ticker(benchmark_symbol).history(start=trade_date, end=end_str)
 
-            if len(stock) < 2 or len(spy) < 2:
+            if len(stock) < 2 or len(benchmark) < 2:
                 return None, None, None
 
-            actual_days = min(holding_days, len(stock) - 1, len(spy) - 1)
+            actual_days = min(holding_days, len(stock) - 1, len(benchmark) - 1)
             raw = float(
                 (stock["Close"].iloc[actual_days] - stock["Close"].iloc[0])
                 / stock["Close"].iloc[0]
             )
-            spy_ret = float(
-                (spy["Close"].iloc[actual_days] - spy["Close"].iloc[0])
-                / spy["Close"].iloc[0]
+            benchmark_ret = float(
+                (benchmark["Close"].iloc[actual_days] - benchmark["Close"].iloc[0])
+                / benchmark["Close"].iloc[0]
             )
-            alpha = raw - spy_ret
+            alpha = raw - benchmark_ret
             return raw, alpha, actual_days
         except Exception as e:
             logger.warning(
@@ -225,6 +232,19 @@ class TradingAgentsGraph:
                 ticker, trade_date, e,
             )
             return None, None, None
+
+    def _return_symbols(self, ticker: str) -> Tuple[str, str]:
+        """Resolve instrument and benchmark symbols for deferred return reflection."""
+        config = getattr(self, "config", {})
+        if not isinstance(config, dict):
+            config = {}
+        configured = config.get("benchmark_symbol")
+        if is_indian_ticker(ticker):
+            registry = IndianInstrumentRegistry()
+            instrument = registry.resolve(ticker)
+            benchmark = configured or config.get("india", {}).get("default_benchmark") or instrument.benchmark
+            return instrument.data_symbol, benchmark
+        return ticker, configured or "SPY"
 
     def _resolve_pending_entries(self, ticker: str) -> None:
         """Resolve pending log entries for ticker at the start of a new run.
@@ -272,7 +292,8 @@ class TradingAgentsGraph:
         self.ticker = company_name
 
         # Resolve any pending memory-log entries for this ticker before the pipeline runs.
-        self._resolve_pending_entries(company_name)
+        if not self.config.get("disable_memory_reflection"):
+            self._resolve_pending_entries(company_name)
 
         # Recompile with a checkpointer if the user opted in.
         if self.config.get("checkpoint_enabled"):

@@ -28,9 +28,35 @@ DEFAULT_CONFIG = {
     # Checkpoint/resume: when True, LangGraph saves state after each node
     # so a crashed run can resume from the last successful step.
     "checkpoint_enabled": False,
+    "batch_mode": False,
+    "disable_memory_reflection": False,
+    "provider_wall_timeout_seconds": None,
+    "max_shortlist_jobs": 10,
+    "screen_confidence_threshold": 0.6,
     # Output language for analyst reports and final decision
     # Internal agent debate stays in English for reasoning quality
     "output_language": "English",
+    # Market assumptions. The default keeps existing US/global behavior, while
+    # Indian NSE/BSE equities opt into Asia/Kolkata context when their ticker
+    # has a .NS/.BO suffix.
+    "market_profile": "global",  # global, india
+    "timezone": None,
+    "benchmark_symbol": None,
+    "india": {
+        "default_exchange": "NSE",
+        "default_benchmark": "^NSEI",
+        "data_provider": os.getenv("TRADINGAGENTS_INDIA_DATA_PROVIDER", "dhan"),
+        "fallback_provider": "yfinance",
+        "registry_csv": os.getenv("TRADINGAGENTS_INDIA_REGISTRY_CSV"),
+        "holidays_csv": os.getenv("TRADINGAGENTS_INDIA_HOLIDAYS_CSV"),
+    },
+    "us": {
+        "data_provider": os.getenv("TRADINGAGENTS_US_DATA_PROVIDER", "massive"),
+        "fallback_provider": "yfinance",
+        "adjusted_prices": True,
+        "default_benchmarks": ["SPY", "QQQ", "IWM"],
+        "market_timezone": "America/New_York",
+    },
     # Debate and discussion settings
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,

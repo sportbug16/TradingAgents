@@ -23,6 +23,7 @@ from .alpha_vantage import (
     get_global_news as get_alpha_vantage_global_news,
 )
 from .alpha_vantage_common import AlphaVantageRateLimitError
+from tradingagents.india.data import IndianDataProviderUnavailable, get_indian_ohlcv_csv_dhan
 
 # Configuration and routing logic
 from .config import get_config
@@ -63,6 +64,7 @@ TOOLS_CATEGORIES = {
 VENDOR_LIST = [
     "yfinance",
     "alpha_vantage",
+    "dhan",
 ]
 
 # Mapping of methods to their vendor-specific implementations
@@ -71,6 +73,7 @@ VENDOR_METHODS = {
     "get_stock_data": {
         "alpha_vantage": get_alpha_vantage_stock,
         "yfinance": get_YFin_data_online,
+        "dhan": get_indian_ohlcv_csv_dhan,
     },
     # technical_indicators
     "get_indicators": {
@@ -155,8 +158,20 @@ def route_to_vendor(method: str, *args, **kwargs):
         impl_func = vendor_impl[0] if isinstance(vendor_impl, list) else vendor_impl
 
         try:
-            return impl_func(*args, **kwargs)
-        except AlphaVantageRateLimitError:
-            continue  # Only rate limits trigger fallback
+            return _limit_tool_output(impl_func(*args, **kwargs))
+        except (AlphaVantageRateLimitError, IndianDataProviderUnavailable):
+            continue  # Known provider-unavailable cases trigger fallback
 
     raise RuntimeError(f"No available vendor for '{method}'")
+
+
+def _limit_tool_output(value):
+    config = get_config()
+    max_chars = config.get("max_tool_output_chars")
+    if not max_chars or not isinstance(value, str) or len(value) <= max_chars:
+        return value
+    omitted = len(value) - max_chars
+    return (
+        value[:max_chars]
+        + f"\n\n[TRUNCATED: omitted {omitted} characters due to max_tool_output_chars={max_chars}]"
+    )
