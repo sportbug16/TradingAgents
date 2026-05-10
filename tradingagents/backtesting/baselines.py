@@ -65,6 +65,32 @@ def simple_momentum_baseline(
     )
 
 
+def low_volatility_baseline(
+    prices_by_ticker: dict[str, pd.DataFrame],
+    lookback_sessions: int = 60,
+    hold_sessions: int = 20,
+    top_n: int = 10,
+) -> BaselineResult:
+    scores = []
+    for ticker, prices in prices_by_ticker.items():
+        frame = _prepare(prices)
+        exit_idx = lookback_sessions + 1 + hold_sessions
+        if len(frame) <= exit_idx:
+            continue
+        volatility = frame["Close"].pct_change().iloc[1 : lookback_sessions + 1].std()
+        if pd.isna(volatility):
+            continue
+        forward = frame["Close"].iloc[exit_idx] / frame["Open"].iloc[lookback_sessions + 1] - 1.0
+        scores.append((float(volatility), forward, ticker))
+    selected = sorted(scores)[:top_n]
+    if not selected:
+        return BaselineResult(name="low_volatility", returns=[])
+    return BaselineResult(
+        name="low_volatility",
+        returns=[sum(forward for _, forward, _ in selected) / len(selected)],
+    )
+
+
 def random_entry_baseline(
     prices_by_ticker: dict[str, pd.DataFrame],
     hold_sessions: int = 3,

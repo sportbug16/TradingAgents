@@ -30,6 +30,12 @@ from .data import (
     dhan_intraday_chunks,
     snapshot_dict,
 )
+from .auth import (
+    DhanAuthClient,
+    DhanAuthError,
+    DhanAuthResult,
+    generate_totp,
+)
 
 __all__ = [
     "DEFAULT_INDIAN_BENCHMARK",
@@ -53,6 +59,10 @@ __all__ = [
     "create_indian_provider",
     "dhan_intraday_chunks",
     "snapshot_dict",
+    "DhanAuthClient",
+    "DhanAuthError",
+    "DhanAuthResult",
+    "generate_totp",
     "infer_indian_exchange",
     "is_indian_ticker",
     "normalize_indian_ticker",

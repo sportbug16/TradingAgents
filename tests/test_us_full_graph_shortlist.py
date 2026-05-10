@@ -7,7 +7,7 @@ import scripts.us_llm_full_graph_shortlist as shortlist_script
 
 @pytest.mark.unit
 def test_full_graph_shortlist_passes_batch_flags_and_records_result(monkeypatch, tmp_path):
-    monkeypatch.setenv("OPENROUTER_API_KEY", "key")
+    monkeypatch.setenv("OPENAI_API_KEY", "key")
     configs = []
 
     class _Graph:
@@ -23,7 +23,7 @@ def test_full_graph_shortlist_passes_batch_flags_and_records_result(monkeypatch,
         json.dumps(
             {
                 "providers": {
-                    "openrouter-openai-4o-mini": {
+                    "openai-gpt-4o-mini": {
                         "decisions": [
                             {
                                 "ticker": "AAPL",
@@ -57,13 +57,14 @@ def test_full_graph_shortlist_passes_batch_flags_and_records_result(monkeypatch,
     assert configs[0]["batch_mode"] is True
     assert configs[0]["disable_memory_reflection"] is True
     payload = json.loads(output.read_text(encoding="utf-8"))
-    decision = payload["providers"]["openrouter-openai-4o-mini"]["decisions"][0]
+    decision = payload["providers"]["openai-gpt-4o-mini"]["decisions"][0]
     assert decision["full_graph_rating"] == "Buy"
     assert decision["final_trade_decision"] == "AAPL decision"
 
 
 @pytest.mark.unit
-def test_openrouter_screening_labels_are_restricted():
+def test_llm_screening_labels_are_restricted():
     defaults = shortlist_script.PROVIDER_DEFAULTS
-    assert defaults["openrouter-openai-4o-mini"]["quick_model"] == "openai/gpt-4o-mini"
+    assert defaults["openai-gpt-4o-mini"]["llm_provider"] == "openai"
+    assert defaults["openai-gpt-4o-mini"]["quick_model"] == "gpt-4o-mini"
     assert defaults["openrouter-deepseek-v4"]["quick_model"] == "deepseek/deepseek-v4-pro"

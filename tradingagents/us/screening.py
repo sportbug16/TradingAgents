@@ -185,6 +185,10 @@ def _client_kwargs(defaults: dict[str, Any]) -> dict[str, Any]:
         kwargs["effort"] = extra["anthropic_effort"]
     if "google_thinking_level" in extra:
         kwargs["thinking_level"] = extra["google_thinking_level"]
+    if "openai_reasoning_effort" in extra:
+        kwargs["reasoning_effort"] = extra["openai_reasoning_effort"]
+    if "openrouter_provider_routing" in extra:
+        kwargs["extra_body"] = {"provider": extra["openrouter_provider_routing"]}
     return kwargs
 
 

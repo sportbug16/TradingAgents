@@ -1,5 +1,6 @@
 import pytest
 import pandas as pd
+import requests
 
 from tradingagents.dataflows.interface import route_to_vendor
 from tradingagents.india.data import (
@@ -32,6 +33,26 @@ class _Session:
 
     def post(self, url, headers, json, timeout):
         self.calls.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
+        return _Response(self.payload)
+
+
+class _RateLimitResponse:
+    status_code = 429
+    headers = {}
+
+    def raise_for_status(self):
+        raise requests.HTTPError("429 Client Error", response=self)
+
+
+class _RetrySession:
+    def __init__(self, payload):
+        self.payload = payload
+        self.calls = []
+
+    def post(self, url, headers, json, timeout):
+        self.calls.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
+        if len(self.calls) == 1:
+            return _RateLimitResponse()
         return _Response(self.payload)
 
 
@@ -93,6 +114,33 @@ def test_dhan_ohlcv_maps_payload_and_uses_cache(tmp_path):
     assert session.calls[0]["json"]["exchangeSegment"] == "NSE_EQ"
     assert len(session.calls) == 1
     assert second.snapshot.cache_key == first.snapshot.cache_key
+
+
+@pytest.mark.unit
+def test_dhan_ohlcv_retries_rate_limit(tmp_path, monkeypatch):
+    monkeypatch.setattr("tradingagents.india.data.time.sleep", lambda *_: None)
+    session = _RetrySession(
+        {
+            "timestamp": [1767312000],
+            "open": [100],
+            "high": [110],
+            "low": [95],
+            "close": [105],
+            "volume": [1000],
+        }
+    )
+    provider = DhanHQProvider(
+        access_token="token",
+        cache_dir=tmp_path,
+        session=session,
+        max_retries=1,
+        retry_base_seconds=0.0,
+    )
+
+    result = provider.get_ohlcv(IndianInstrumentRegistry().resolve("RELIANCE.NS"), "2026-01-01", "2026-01-05")
+
+    assert result.data.iloc[0]["Close"] == 105
+    assert len(session.calls) == 2
 
 
 @pytest.mark.unit

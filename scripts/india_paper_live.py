@@ -1,8 +1,9 @@
-"""Run a guarded paper-live Indian equities session.
+"""Run a guarded paper-live Indian equities monitor.
 
-The runner polls free market data, creates deterministic pilot signals, and
-routes paper orders through ``PaperBroker``. It is deliberately long-only and
-requires no live broker credentials.
+The runner polls market data, creates deterministic pilot signals, and routes
+paper orders through ``PaperBroker``. LLM graph calls are deliberately kept out
+of this market-hours monitor; LLM decisions should be precomputed after close
+or before open and treated as a thesis/risk overlay.
 """
 
 from __future__ import annotations

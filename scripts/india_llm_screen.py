@@ -1,4 +1,4 @@
-"""Generate India packets and run one-call LLM screening."""
+"""Generate India packets and run one-call investment-oriented LLM screening."""
 
 from __future__ import annotations
 
@@ -24,17 +24,7 @@ def main() -> None:
     load_dotenv()
     args = _parse_args()
     output_dir = Path(args.output)
-    packet_result = generate_packets(
-        tickers=[t.strip().upper() for t in args.tickers.split(",") if t.strip()],
-        dates=[d.strip() for d in args.dates.split(",") if d.strip()],
-        output_dir=args.packet_output or output_dir / "packets",
-        price_start=args.start,
-        price_end=args.end,
-        horizon_sessions=args.horizon_sessions,
-        data_provider_name=args.data_provider,
-        allow_fallback=args.allow_fallback,
-        benchmark=args.benchmark,
-    )
+    packet_result = _generate_horizon_packets(args, output_dir)
     packets = packet_result["packets"]
     providers = provider_labels(args.providers)
     if args.parallel_providers and len(providers) > 1:
@@ -52,8 +42,9 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tickers", default=DEFAULT_TICKERS)
     parser.add_argument("--dates", default="2026-02-02")
-    parser.add_argument("--providers", default="anthropic,google,openrouter-openai-4o-mini,openrouter-deepseek-v4")
-    parser.add_argument("--horizon-sessions", type=int, choices=[1, 3, 5], default=3)
+    parser.add_argument("--providers", default="anthropic,google,openai-gpt-4o-mini,openai-gpt-5-4,openrouter-deepseek-v4")
+    parser.add_argument("--horizons", default="5,20,60,126")
+    parser.add_argument("--horizon-sessions", type=int, default=None)
     parser.add_argument("--start", default="2026-01-01")
     parser.add_argument("--end", default="2026-05-01")
     parser.add_argument("--benchmark", default="^NSEI")
@@ -66,6 +57,48 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--packet-output", default=None)
     parser.add_argument("--output", default="reports/india_llm_screen/default")
     return parser.parse_args()
+
+
+def _generate_horizon_packets(args: argparse.Namespace, output_dir: Path) -> dict:
+    tickers = [t.strip().upper() for t in args.tickers.split(",") if t.strip()]
+    dates = [d.strip() for d in args.dates.split(",") if d.strip()]
+    horizons = [args.horizon_sessions] if args.horizon_sessions else _horizons(args.horizons)
+    packet_roots = []
+    packets = []
+    manifests = []
+    for horizon in horizons:
+        root = Path(args.packet_output) / f"h{horizon}" if args.packet_output else output_dir / "packets" / f"h{horizon}"
+        result = generate_packets(
+            tickers=tickers,
+            dates=dates,
+            output_dir=root,
+            price_start=args.start,
+            price_end=args.end,
+            horizon_sessions=horizon,
+            data_provider_name=args.data_provider,
+            allow_fallback=args.allow_fallback,
+            benchmark=args.benchmark,
+        )
+        packet_roots.append(str(root))
+        packets.extend(result["packets"])
+        manifests.append(result["manifest"])
+    return {
+        "manifest": {
+            "packet_count": len(packets),
+            "horizons": horizons,
+            "packet_roots": packet_roots,
+            "manifests": manifests,
+        },
+        "packets": packets,
+    }
+
+
+def _horizons(value: str) -> list[int]:
+    horizons = [int(h.strip()) for h in value.split(",") if h.strip()]
+    invalid = [h for h in horizons if h < 1 or h > 252]
+    if invalid:
+        raise ValueError(f"invalid India investment horizons: {invalid}; expected 1-252 sessions")
+    return horizons
 
 
 def _provider_timeout(args: argparse.Namespace, provider: str) -> int | None:

@@ -96,3 +96,8 @@ def test_india_paper_live_records_provider_errors():
 
     assert events[0]["error"] == "provider down"
     assert events[0]["data_provider"] == "bad"
+
+
+@pytest.mark.unit
+def test_india_paper_live_does_not_import_full_graph():
+    assert not hasattr(india_paper_live, "TradingAgentsGraph")

@@ -4,6 +4,7 @@ import pytest
 from tradingagents.backtesting.baselines import (
     buy_and_hold_baseline,
     equal_weight_baseline,
+    low_volatility_baseline,
     random_entry_baseline,
     simple_momentum_baseline,
 )
@@ -12,8 +13,8 @@ from tradingagents.backtesting.baselines import (
 def _prices(values):
     return pd.DataFrame(
         [
-            {"Date": f"2026-01-{i + 1:02d}", "Open": v, "High": v, "Low": v, "Close": v}
-            for i, v in enumerate(values)
+            {"Date": day.date().isoformat(), "Open": v, "High": v, "Low": v, "Close": v}
+            for day, v in zip(pd.bdate_range("2026-01-01", periods=len(values)), values)
         ]
     )
 
@@ -43,3 +44,15 @@ class TestBaselines:
         first = random_entry_baseline(prices, hold_sessions=1, seed=7)
         second = random_entry_baseline(prices, hold_sessions=1, seed=7)
         assert first.returns == second.returns
+
+    def test_low_volatility_selects_lowest_vol_names(self):
+        calm = [100 + i for i in range(90)]
+        choppy = [100, 120] * 45
+        result = low_volatility_baseline(
+            {"calm": _prices(calm), "choppy": _prices(choppy)},
+            lookback_sessions=20,
+            hold_sessions=5,
+            top_n=1,
+        )
+        assert result.name == "low_volatility"
+        assert len(result.returns) == 1

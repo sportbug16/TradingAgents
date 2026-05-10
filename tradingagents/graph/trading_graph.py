@@ -156,6 +156,11 @@ class TradingAgentsGraph:
             if effort:
                 kwargs["effort"] = effort
 
+        elif provider == "openrouter":
+            provider_routing = self.config.get("openrouter_provider_routing")
+            if provider_routing:
+                kwargs["extra_body"] = {"provider": provider_routing}
+
         return kwargs
 
     def _create_tool_nodes(self) -> Dict[str, ToolNode]:

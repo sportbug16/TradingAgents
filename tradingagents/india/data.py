@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import time
 from typing import Any, Protocol
 
 import pandas as pd
@@ -142,6 +143,8 @@ class DhanHQProvider:
         cache_dir: str | Path | None = None,
         session: requests.Session | None = None,
         benchmark_provider: IndianMarketDataProvider | None = None,
+        max_retries: int | None = None,
+        retry_base_seconds: float | None = None,
     ):
         self.access_token = access_token or os.getenv("DHAN_ACCESS_TOKEN")
         self.timeout = timeout
@@ -151,6 +154,12 @@ class DhanHQProvider:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.session = session or requests.Session()
         self.benchmark_provider = benchmark_provider or YFinanceIndianProvider()
+        self.max_retries = max_retries if max_retries is not None else int(os.getenv("DHAN_MAX_RETRIES", "4"))
+        self.retry_base_seconds = (
+            retry_base_seconds
+            if retry_base_seconds is not None
+            else float(os.getenv("DHAN_RETRY_BASE_SECONDS", "2.0"))
+        )
 
     def get_ohlcv(self, instrument: IndianInstrument, start_date: str, end_date: str) -> IndianDataFrame:
         payload = self._base_payload(instrument) | {
@@ -238,21 +247,7 @@ class DhanHQProvider:
         if cache_path.exists():
             raw = json.loads(cache_path.read_text(encoding="utf-8"))
         else:
-            response = self.session.post(
-                f"{self.base_url}{path}",
-                headers={
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "access-token": self.access_token,
-                },
-                json=payload,
-                timeout=self.timeout,
-            )
-            try:
-                response.raise_for_status()
-            except requests.RequestException as exc:
-                raise IndianDataProviderUnavailable(str(exc)) from exc
-            raw = response.json()
+            raw = self._post_with_retries(path, payload)
             cache_path.write_text(json.dumps(raw, indent=2, default=str), encoding="utf-8")
 
         return IndianDataFrame(
@@ -268,6 +263,33 @@ class DhanHQProvider:
                 version="v2",
             ),
         )
+
+    def _post_with_retries(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        url = f"{self.base_url}{path}"
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "access-token": self.access_token,
+        }
+        last_error: requests.RequestException | None = None
+        for attempt in range(self.max_retries + 1):
+            response = self.session.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=self.timeout,
+            )
+            try:
+                response.raise_for_status()
+                return response.json()
+            except requests.RequestException as exc:
+                last_error = exc
+                if getattr(response, "status_code", None) != 429 or attempt >= self.max_retries:
+                    raise IndianDataProviderUnavailable(str(exc)) from exc
+                retry_after = response.headers.get("Retry-After") if hasattr(response, "headers") else None
+                delay = float(retry_after) if retry_after else min(self.retry_base_seconds * (2**attempt), 30.0)
+                time.sleep(delay)
+        raise IndianDataProviderUnavailable(str(last_error))
 
 
 class FallbackIndianProvider:

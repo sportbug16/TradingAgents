@@ -19,6 +19,7 @@ from langchain_core.prompt_values import ChatPromptValue
 from tradingagents.llm_clients.openai_client import (
     DeepSeekChatOpenAI,
     NormalizedChatOpenAI,
+    OpenAIClient,
     _input_to_messages,
 )
 
@@ -167,3 +168,15 @@ class TestBaseClassIsolation:
             NormalizedChatOpenAI._get_request_payload
             is NormalizedChatOpenAI.__bases__[0]._get_request_payload
         )
+
+
+@pytest.mark.unit
+def test_openrouter_extra_body_is_forwarded_to_chat_client():
+    llm = OpenAIClient(
+        "deepseek/deepseek-v4-pro",
+        provider="openrouter",
+        api_key="placeholder",
+        extra_body={"provider": {"sort": "throughput"}},
+    ).get_llm()
+
+    assert llm.extra_body == {"provider": {"sort": "throughput"}}

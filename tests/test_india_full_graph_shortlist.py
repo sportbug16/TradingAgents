@@ -7,7 +7,7 @@ import scripts.india_llm_full_graph_shortlist as shortlist_script
 
 @pytest.mark.unit
 def test_india_full_graph_shortlist_sets_batch_and_india_flags(monkeypatch, tmp_path):
-    monkeypatch.setenv("OPENROUTER_API_KEY", "key")
+    monkeypatch.setenv("OPENAI_API_KEY", "key")
     configs = []
 
     class _Graph:
@@ -23,7 +23,7 @@ def test_india_full_graph_shortlist_sets_batch_and_india_flags(monkeypatch, tmp_
         json.dumps(
             {
                 "providers": {
-                    "openrouter-openai-4o-mini": {
+                    "openai-gpt-4o-mini": {
                         "decisions": [
                             {
                                 "ticker": "RELIANCE.NS",
@@ -58,6 +58,6 @@ def test_india_full_graph_shortlist_sets_batch_and_india_flags(monkeypatch, tmp_
     assert configs[0]["disable_memory_reflection"] is True
     assert configs[0]["market_profile"] == "india"
     payload = json.loads(output.read_text(encoding="utf-8"))
-    decision = payload["providers"]["openrouter-openai-4o-mini"]["decisions"][0]
+    decision = payload["providers"]["openai-gpt-4o-mini"]["decisions"][0]
     assert decision["full_graph_rating"] == "Overweight"
     assert decision["final_trade_decision"] == "RELIANCE.NS final"

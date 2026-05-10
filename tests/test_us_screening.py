@@ -39,7 +39,7 @@ def test_parse_screen_response_rejects_invalid_rating():
 
 @pytest.mark.unit
 def test_screen_provider_makes_one_call_per_packet(monkeypatch, tmp_path):
-    monkeypatch.setenv("OPENROUTER_API_KEY", "key")
+    monkeypatch.setenv("OPENAI_API_KEY", "key")
     calls = []
 
     class _Response:
@@ -64,7 +64,7 @@ def test_screen_provider_makes_one_call_per_packet(monkeypatch, tmp_path):
 
     monkeypatch.setattr(screening, "create_llm_client", lambda **kwargs: _Client())
     result = screen_provider(
-        provider="openrouter-openai-4o-mini",
+        provider="openai-gpt-4o-mini",
         packets=[_packet("AAPL"), _packet("MSFT")],
         output_dir=tmp_path,
         timeout_seconds=5,
@@ -73,8 +73,50 @@ def test_screen_provider_makes_one_call_per_packet(monkeypatch, tmp_path):
     assert len(calls) == 2
     assert result["status"] == "completed"
     assert result["decision_count"] == 2
-    assert result["decisions"][0]["model"] == PROVIDER_DEFAULTS["openrouter-openai-4o-mini"]["quick_model"]
-    assert json.loads((tmp_path / "openrouter-openai-4o-mini.json").read_text(encoding="utf-8"))["status"] == "completed"
+    assert result["decisions"][0]["model"] == PROVIDER_DEFAULTS["openai-gpt-4o-mini"]["quick_model"]
+    assert json.loads((tmp_path / "openai-gpt-4o-mini.json").read_text(encoding="utf-8"))["status"] == "completed"
+
+
+@pytest.mark.unit
+def test_openrouter_deepseek_screening_uses_throughput_routing(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "key")
+    created_kwargs = {}
+
+    class _Response:
+        content = json.dumps(
+            {
+                "rating": "Hold",
+                "confidence": 0.5,
+                "thesis": "balanced setup",
+                "target_horizon": "20 sessions",
+                "full_graph_recommended": False,
+            }
+        )
+
+    class _LLM:
+        def invoke(self, prompt):
+            return _Response()
+
+    class _Client:
+        def get_llm(self):
+            return _LLM()
+
+    def _create(**kwargs):
+        created_kwargs.update(kwargs)
+        return _Client()
+
+    monkeypatch.setattr(screening, "create_llm_client", _create)
+    result = screen_provider(
+        provider="openrouter-deepseek-v4",
+        packets=[_packet("AAPL")],
+        output_dir=tmp_path,
+        timeout_seconds=5,
+    )
+
+    assert result["status"] == "completed"
+    assert created_kwargs["provider"] == "openrouter"
+    assert created_kwargs["model"] == "deepseek/deepseek-v4-pro"
+    assert created_kwargs["extra_body"] == {"provider": {"sort": "throughput"}}
 
 
 @pytest.mark.unit
@@ -85,8 +127,8 @@ def test_merge_preserves_completed_and_timeout_provider_results(tmp_path):
         encoding="utf-8",
     )
 
-    merged = merge_provider_outputs(tmp_path, ["anthropic", "google", "openrouter-openai-4o-mini"])
+    merged = merge_provider_outputs(tmp_path, ["anthropic", "google", "openai-gpt-4o-mini"])
 
     assert merged["providers"]["anthropic"]["status"] == "timeout"
     assert merged["providers"]["google"]["decision_count"] == 1
-    assert merged["providers"]["openrouter-openai-4o-mini"]["status"] == "missing"
+    assert merged["providers"]["openai-gpt-4o-mini"]["status"] == "missing"

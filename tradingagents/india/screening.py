@@ -1,4 +1,4 @@
-"""Fast one-call LLM screening for Indian data packets."""
+"""Fast one-call LLM screening for Indian investment data packets."""
 
 from __future__ import annotations
 
@@ -161,7 +161,7 @@ def _screen_prompt(packet: dict[str, Any]) -> str:
         "data_quality": packet["data_quality"],
     }
     return (
-        "You are screening NSE/BSE cash equities for a long-only Indian swing-trading study. "
+        "You are screening NSE/BSE cash equities for a long-only Indian investment and swing-position study. "
         "Use only the JSON data provided. Assume INR quotes, Asia/Kolkata market hours, T+1 settlement, "
         "and no overnight shorting in cash equities. Return exactly one JSON object with keys: "
         "rating, confidence, thesis, target_horizon, full_graph_recommended. rating must be one of "
@@ -177,6 +177,10 @@ def _client_kwargs(defaults: dict[str, Any]) -> dict[str, Any]:
         kwargs["effort"] = extra["anthropic_effort"]
     if "google_thinking_level" in extra:
         kwargs["thinking_level"] = extra["google_thinking_level"]
+    if "openai_reasoning_effort" in extra:
+        kwargs["reasoning_effort"] = extra["openai_reasoning_effort"]
+    if "openrouter_provider_routing" in extra:
+        kwargs["extra_body"] = {"provider": extra["openrouter_provider_routing"]}
     return kwargs
 
 

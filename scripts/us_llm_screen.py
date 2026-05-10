@@ -54,7 +54,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tickers", default="mega_caps")
     parser.add_argument("--dates", default="2026-02-02")
-    parser.add_argument("--providers", default="anthropic,google,openrouter-openai-4o-mini,openrouter-deepseek-v4")
+    parser.add_argument("--providers", default="anthropic,google,openai-gpt-4o-mini,openai-gpt-5-4,openrouter-deepseek-v4")
     parser.add_argument("--horizon-sessions", type=int, default=20)
     parser.add_argument("--price-start", default="2026-01-01")
     parser.add_argument("--price-end", default="2026-05-01")

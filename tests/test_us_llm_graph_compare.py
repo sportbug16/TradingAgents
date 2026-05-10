@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 import scripts.us_llm_graph_compare as compare
+from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.us.data import USDataFrame, USDataSnapshot
 
 
@@ -59,3 +60,16 @@ def test_missing_provider_keys_are_skipped(monkeypatch, tmp_path):
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["providers"]["anthropic"]["status"] == "skipped"
     assert data["providers"]["google"]["status"] == "skipped"
+
+
+@pytest.mark.unit
+def test_full_graph_openrouter_config_uses_throughput_routing():
+    graph = TradingAgentsGraph.__new__(TradingAgentsGraph)
+    graph.config = {
+        "llm_provider": "openrouter",
+        "llm_timeout": 60.0,
+        "llm_max_retries": 0,
+        "openrouter_provider_routing": {"sort": "throughput"},
+    }
+
+    assert graph._get_provider_kwargs()["extra_body"] == {"provider": {"sort": "throughput"}}
