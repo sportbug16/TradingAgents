@@ -99,5 +99,16 @@ def test_india_paper_live_records_provider_errors():
 
 
 @pytest.mark.unit
+def test_india_paper_live_loads_json_watchlist(monkeypatch, tmp_path):
+    watchlist = tmp_path / "watchlist.json"
+    watchlist.write_text('{"tickers": ["reliance.ns", "TCS.NS"]}', encoding="utf-8")
+    monkeypatch.setattr("sys.argv", ["india_paper_live.py"])
+    args = india_paper_live._parse_args()
+    args.tickers_file = str(watchlist)
+
+    assert india_paper_live._load_tickers(args) == ["RELIANCE.NS", "TCS.NS"]
+
+
+@pytest.mark.unit
 def test_india_paper_live_does_not_import_full_graph():
     assert not hasattr(india_paper_live, "TradingAgentsGraph")

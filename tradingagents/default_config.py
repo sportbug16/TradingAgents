@@ -46,7 +46,7 @@ DEFAULT_CONFIG = {
         "default_exchange": "NSE",
         "default_benchmark": "^NSEI",
         "data_provider": os.getenv("TRADINGAGENTS_INDIA_DATA_PROVIDER", "dhan"),
-        "fallback_provider": "yfinance",
+        "fallback_provider": None,
         "registry_csv": os.getenv("TRADINGAGENTS_INDIA_REGISTRY_CSV"),
         "holidays_csv": os.getenv("TRADINGAGENTS_INDIA_HOLIDAYS_CSV"),
     },

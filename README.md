@@ -182,6 +182,8 @@ An interface will appear showing results as they load, letting you track the age
 
 ## TradingAgents Package
 
+For the India-market research-to-paper-live signal path used in this fork, see [`docs/india-signal-flow.md`](docs/india-signal-flow.md).
+
 ### Implementation Details
 
 We built TradingAgents with LangGraph to ensure flexibility and modularity. The framework supports multiple LLM providers: OpenAI, Google, Anthropic, xAI, DeepSeek, Qwen (Alibaba DashScope), GLM (Zhipu), OpenRouter, Ollama for local models, and Azure OpenAI for enterprise.

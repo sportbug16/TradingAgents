@@ -18,6 +18,7 @@ from tradingagents.india.screening import merge_provider_outputs, screen_provide
 
 
 DEFAULT_TICKERS = "RELIANCE.NS,TCS.NS,INFY.NS,HDFCBANK.NS,SBIN.NS"
+DEFAULT_PROVIDERS = "anthropic,google,openai-gpt-5-4,openrouter-deepseek-v4"
 
 
 def main() -> None:
@@ -42,7 +43,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tickers", default=DEFAULT_TICKERS)
     parser.add_argument("--dates", default="2026-02-02")
-    parser.add_argument("--providers", default="anthropic,google,openai-gpt-4o-mini,openai-gpt-5-4,openrouter-deepseek-v4")
+    parser.add_argument("--providers", default=DEFAULT_PROVIDERS)
     parser.add_argument("--horizons", default="5,20,60,126")
     parser.add_argument("--horizon-sessions", type=int, default=None)
     parser.add_argument("--start", default="2026-01-01")

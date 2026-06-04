@@ -70,6 +70,8 @@ def test_india_screen_provider_makes_one_call_per_packet(monkeypatch, tmp_path):
     assert "INR" in calls[0]
     assert result["decision_count"] == 2
     assert result["decisions"][0]["model"] == PROVIDER_DEFAULTS["openai-gpt-4o-mini"]["quick_model"]
+    assert result["decisions"][0]["horizon_sessions"] == 3
+    assert result["metadata"]["call_count"] == 2
 
 
 @pytest.mark.unit
@@ -142,3 +144,6 @@ def test_india_llm_screen_defaults_to_investment_horizons(monkeypatch):
     args = india_llm_screen._parse_args()
     assert india_llm_screen._horizons(args.horizons) == [5, 20, 60, 126]
     assert args.horizon_sessions is None
+    assert "openai-gpt-5-4" in args.providers
+    assert "openrouter-deepseek-v4" in args.providers
+    assert "openrouter-openai-4o-mini" not in args.providers

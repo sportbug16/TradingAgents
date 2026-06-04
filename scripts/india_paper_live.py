@@ -17,6 +17,7 @@ import sys
 import time as time_module
 
 import pandas as pd
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -29,8 +30,9 @@ DEFAULT_TICKERS = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "SBIN.NS"]
 
 
 def main() -> None:
+    load_dotenv()
     args = _parse_args()
-    tickers = [t.strip().upper() for t in args.tickers.split(",") if t.strip()]
+    tickers = _load_tickers(args)
     events: list[dict] = []
     registry = IndianInstrumentRegistry()
     provider = create_indian_provider(args.data_provider, allow_fallback=args.allow_fallback)
@@ -41,9 +43,11 @@ def main() -> None:
     broker, previous_events = _load_broker(output_path, args.cash)
     events.extend(previous_events)
 
-    deadline = time_module.time() + args.duration_minutes * 60
-    while args.once or time_module.time() < deadline:
+    deadline, runtime_mode = _resolve_deadline(datetime.now(), args, calendar)
+    while True:
         now = datetime.now()
+        if not args.once and now > deadline:
+            break
         market_open = args.allow_outside_market_hours or _is_market_open(now, calendar)
         batch_events = _poll_once(
             tickers,
@@ -61,6 +65,8 @@ def main() -> None:
             "tickers": tickers,
             "data_provider": getattr(provider, "name", args.data_provider),
             "allow_fallback": args.allow_fallback,
+            "runtime_mode": runtime_mode,
+            "session_deadline": deadline.isoformat(timespec="seconds"),
             "market_open": market_open,
             "cash": broker.cash,
             "positions": [asdict(p) for p in broker.positions()],
@@ -72,12 +78,16 @@ def main() -> None:
         print(json.dumps({"updated_at": snapshot["updated_at"], "events": batch_events}, default=str))
         if args.once:
             break
-        time_module.sleep(args.poll_seconds)
+        remaining_seconds = (deadline - now).total_seconds()
+        if remaining_seconds <= 0:
+            break
+        time_module.sleep(min(args.poll_seconds, remaining_seconds))
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tickers", default=",".join(DEFAULT_TICKERS))
+    parser.add_argument("--tickers-file", default=None)
     parser.add_argument("--cash", type=float, default=1_000_000)
     parser.add_argument("--order-value", type=float, default=50_000)
     parser.add_argument("--lookback-days", type=int, default=10)
@@ -90,6 +100,30 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--allow-fallback", action="store_true")
     parser.add_argument("--holidays-csv", default=None)
     return parser.parse_args()
+
+
+def _load_tickers(args: argparse.Namespace) -> list[str]:
+    if not args.tickers_file:
+        return [t.strip().upper() for t in args.tickers.split(",") if t.strip()]
+
+    path = Path(args.tickers_file)
+    if not path.exists():
+        raise FileNotFoundError(f"tickers file not found: {path}")
+    if path.suffix.lower() == ".json":
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(payload, dict):
+            values = payload.get("tickers") or payload.get("symbols") or payload.get("watchlist")
+        else:
+            values = payload
+        if not isinstance(values, list):
+            raise ValueError("JSON tickers file must be a list or an object with tickers/symbols/watchlist")
+        return [str(t).strip().upper() for t in values if str(t).strip()]
+
+    text = path.read_text(encoding="utf-8")
+    values = [item.strip() for line in text.splitlines() for item in line.split(",")]
+    if values and values[0].lower() in {"ticker", "tickers", "symbol", "symbols"}:
+        values = values[1:]
+    return [value.upper() for value in values if value]
 
 
 def _load_broker(output_path: Path, default_cash: float) -> tuple[PaperBroker, list[dict]]:
@@ -118,6 +152,24 @@ def _is_market_open(now: datetime, calendar: IndianTradingCalendar | None = None
         return False
     current = now.time()
     return time(9, 15) <= current <= time(15, 30)
+
+
+def _resolve_deadline(
+    now: datetime,
+    args: argparse.Namespace,
+    calendar: IndianTradingCalendar,
+) -> tuple[datetime, str]:
+    if args.once:
+        return now, "once"
+    if args.allow_outside_market_hours:
+        return now + timedelta(minutes=args.duration_minutes), "fixed_duration"
+    if not calendar.is_session(now):
+        return now, "non_session_day"
+
+    market_close = datetime.combine(now.date(), time(15, 30))
+    if now >= market_close:
+        return now, "market_closed"
+    return market_close, "market_close"
 
 
 def _poll_once(

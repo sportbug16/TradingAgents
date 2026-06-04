@@ -13,9 +13,7 @@ from typing import Any, Protocol
 
 import pandas as pd
 import requests
-import yfinance as yf
 
-from tradingagents.dataflows.stockstats_utils import yf_retry
 from tradingagents.default_config import DEFAULT_CONFIG
 
 from .market import IndianInstrument, IndianInstrumentRegistry
@@ -62,74 +60,6 @@ class IndianMarketDataProvider(Protocol):
         ...
 
 
-class YFinanceIndianProvider:
-    """Free fallback provider for Indian equities and benchmarks."""
-
-    name = "yfinance"
-
-    def get_ohlcv(self, instrument: IndianInstrument, start_date: str, end_date: str) -> IndianDataFrame:
-        data = _download_yfinance(instrument.data_symbol, start_date, end_date)
-        return IndianDataFrame(
-            data=data,
-            snapshot=DataSnapshot(
-                provider=self.name,
-                endpoint="yf.download",
-                params={"symbol": instrument.data_symbol, "start": start_date, "end": end_date, "interval": "1d"},
-                adjusted=True,
-                fetched_at=_now(),
-                fallback_unofficial=True,
-                version="live",
-            ),
-        )
-
-    def get_intraday_ohlcv(
-        self,
-        instrument: IndianInstrument,
-        start_datetime: str,
-        end_datetime: str,
-        interval_minutes: int = 5,
-    ) -> IndianDataFrame:
-        interval = f"{interval_minutes}m"
-        data = yf_retry(
-            lambda: yf.download(
-                instrument.data_symbol,
-                start=start_datetime,
-                end=end_datetime,
-                interval=interval,
-                auto_adjust=True,
-                multi_level_index=False,
-                progress=False,
-            )
-        )
-        return IndianDataFrame(
-            data=_normalize_ohlcv(data),
-            snapshot=DataSnapshot(
-                provider=self.name,
-                endpoint="yf.download",
-                params={"symbol": instrument.data_symbol, "start": start_datetime, "end": end_datetime, "interval": interval},
-                adjusted=True,
-                fetched_at=_now(),
-                fallback_unofficial=True,
-                version="live",
-            ),
-        )
-
-    def get_benchmark_ohlcv(self, benchmark: str, start_date: str, end_date: str) -> IndianDataFrame:
-        data = _download_yfinance(benchmark, start_date, end_date)
-        return IndianDataFrame(
-            data=data,
-            snapshot=DataSnapshot(
-                provider=self.name,
-                endpoint="yf.download",
-                params={"symbol": benchmark, "start": start_date, "end": end_date, "interval": "1d"},
-                adjusted=True,
-                fetched_at=_now(),
-                fallback_unofficial=True,
-                version="live",
-            ),
-        )
-
-
 class DhanHQProvider:
     """DhanHQ v2 historical candle adapter for NSE/BSE cash equities."""
 
@@ -142,7 +72,6 @@ class DhanHQProvider:
         timeout: float = 30.0,
         cache_dir: str | Path | None = None,
         session: requests.Session | None = None,
-        benchmark_provider: IndianMarketDataProvider | None = None,
         max_retries: int | None = None,
         retry_base_seconds: float | None = None,
     ):
@@ -153,7 +82,6 @@ class DhanHQProvider:
         self.cache_dir = Path(cache_dir or DEFAULT_CONFIG["data_cache_dir"]) / "dhanhq"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.session = session or requests.Session()
-        self.benchmark_provider = benchmark_provider or YFinanceIndianProvider()
         self.max_retries = max_retries if max_retries is not None else int(os.getenv("DHAN_MAX_RETRIES", "4"))
         self.retry_base_seconds = (
             retry_base_seconds
@@ -213,20 +141,11 @@ class DhanHQProvider:
         )
 
     def get_benchmark_ohlcv(self, benchmark: str, start_date: str, end_date: str) -> IndianDataFrame:
-        result = self.benchmark_provider.get_benchmark_ohlcv(benchmark, start_date, end_date)
-        return IndianDataFrame(
-            data=result.data,
-            snapshot=DataSnapshot(
-                provider=result.snapshot.provider,
-                endpoint=result.snapshot.endpoint,
-                params=result.snapshot.params,
-                adjusted=result.snapshot.adjusted,
-                fetched_at=result.snapshot.fetched_at,
-                cache_key=result.snapshot.cache_key,
-                fallback_unofficial=True,
-                version=result.snapshot.version,
-            ),
-        )
+        payload = _benchmark_payload(benchmark) | {
+            "fromDate": start_date,
+            "toDate": end_date,
+        }
+        return self._post_chart("/charts/historical", payload, adjusted=False)
 
     def _base_payload(self, instrument: IndianInstrument) -> dict[str, Any]:
         if not instrument.dhan_security_id:
@@ -292,39 +211,6 @@ class DhanHQProvider:
         raise IndianDataProviderUnavailable(str(last_error))
 
 
-class FallbackIndianProvider:
-    """Preferred provider with explicit fallback metadata."""
-
-    def __init__(self, primary: IndianMarketDataProvider, fallback: IndianMarketDataProvider):
-        self.primary = primary
-        self.fallback = fallback
-        self.name = f"{primary.name}+fallback_{fallback.name}"
-
-    def get_ohlcv(self, instrument: IndianInstrument, start_date: str, end_date: str) -> IndianDataFrame:
-        try:
-            return self.primary.get_ohlcv(instrument, start_date, end_date)
-        except IndianDataProviderUnavailable:
-            return self.fallback.get_ohlcv(instrument, start_date, end_date)
-
-    def get_intraday_ohlcv(
-        self,
-        instrument: IndianInstrument,
-        start_datetime: str,
-        end_datetime: str,
-        interval_minutes: int = 5,
-    ) -> IndianDataFrame:
-        try:
-            return self.primary.get_intraday_ohlcv(instrument, start_datetime, end_datetime, interval_minutes)
-        except IndianDataProviderUnavailable:
-            return self.fallback.get_intraday_ohlcv(instrument, start_datetime, end_datetime, interval_minutes)
-
-    def get_benchmark_ohlcv(self, benchmark: str, start_date: str, end_date: str) -> IndianDataFrame:
-        try:
-            return self.primary.get_benchmark_ohlcv(benchmark, start_date, end_date)
-        except IndianDataProviderUnavailable:
-            return self.fallback.get_benchmark_ohlcv(benchmark, start_date, end_date)
-
-
 def create_indian_provider(
     name: str | None = None,
     *,
@@ -334,18 +220,12 @@ def create_indian_provider(
     config = config or DEFAULT_CONFIG
     india_config = config.get("india", {}) if isinstance(config, dict) else {}
     provider = (name or india_config.get("data_provider") or os.getenv("TRADINGAGENTS_INDIA_DATA_PROVIDER") or "dhan").lower()
-    fallback_name = (india_config.get("fallback_provider") or "yfinance").lower()
     cache_dir = config.get("data_cache_dir", DEFAULT_CONFIG["data_cache_dir"]) if isinstance(config, dict) else DEFAULT_CONFIG["data_cache_dir"]
 
     if provider == "yfinance":
-        return YFinanceIndianProvider()
+        raise ValueError("yfinance is not supported for India data; use dhan")
     if provider in {"dhan", "dhanhq"}:
-        try:
-            return DhanHQProvider(cache_dir=cache_dir)
-        except IndianDataProviderUnavailable:
-            if allow_fallback and fallback_name == "yfinance":
-                return YFinanceIndianProvider()
-            raise
+        return DhanHQProvider(cache_dir=cache_dir)
     raise ValueError(f"unsupported Indian data provider: {provider}")
 
 
@@ -367,18 +247,27 @@ def snapshot_dict(snapshot: DataSnapshot) -> dict[str, Any]:
     return asdict(snapshot)
 
 
-def _download_yfinance(symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
-    data = yf_retry(
-        lambda: yf.download(
-            symbol,
-            start=start_date,
-            end=end_date,
-            auto_adjust=True,
-            multi_level_index=False,
-            progress=False,
-        )
-    )
-    return _normalize_ohlcv(data)
+def _benchmark_payload(benchmark: str) -> dict[str, Any]:
+    normalized = benchmark.strip().upper().replace(" ", "")
+    aliases = {
+        "^NSEI": ("13", "NIFTY"),
+        "NIFTY": ("13", "NIFTY"),
+        "NIFTY50": ("13", "NIFTY"),
+        "NIFTY-50": ("13", "NIFTY"),
+        "^NSEBANK": ("25", "BANKNIFTY"),
+        "NIFTYBANK": ("25", "BANKNIFTY"),
+        "BANKNIFTY": ("25", "BANKNIFTY"),
+    }
+    if normalized not in aliases:
+        raise IndianDataProviderUnavailable(f"missing Dhan index mapping for benchmark {benchmark}")
+    security_id, _symbol = aliases[normalized]
+    return {
+        "securityId": security_id,
+        "exchangeSegment": "IDX_I",
+        "instrument": "INDEX",
+        "expiryCode": 0,
+        "oi": False,
+    }
 
 
 def _normalize_ohlcv(data: pd.DataFrame) -> pd.DataFrame:

@@ -45,12 +45,12 @@ class _Provider:
         return IndianDataFrame(
             _prices(300),
             DataSnapshot(
-                provider="yfinance",
+                provider="fixture",
                 endpoint="benchmark",
                 params={"ticker": benchmark, "start": start, "end": end},
-                adjusted=True,
+                adjusted=False,
                 fetched_at="2026-01-01T00:00:00Z",
-                fallback_unofficial=True,
+                fallback_unofficial=False,
                 cache_key=f"{benchmark}-bars",
             ),
         )
@@ -72,7 +72,7 @@ def test_generate_india_packets_has_snapshot_quality_and_cache(tmp_path, monkeyp
     packet = first["packets"][0]
     assert packet["ticker"] == "RELIANCE.NS"
     assert packet["data_quality"]["provider"] == "fixture"
-    assert packet["data_quality"]["benchmark_fallback_unofficial"] is True
+    assert packet["data_quality"]["benchmark_fallback_unofficial"] is False
     assert packet["price_features"]["return_20d"] is not None
     assert packet["correlation_features"]["top_correlations"]
 

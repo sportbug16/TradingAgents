@@ -220,6 +220,9 @@ def _rows_to_instruments(rows: Iterable[dict]) -> Iterable[IndianInstrument]:
             continue
         exchange = _parse_exchange(row["exchange"])
         avg_value = row.get("avg_daily_value_inr")
+        tick_size = row.get("tick_size")
+        lot_size = row.get("lot_size")
+        active = row.get("active")
         yield IndianInstrument(
             symbol=row["symbol"].strip().upper(),
             exchange=exchange,
@@ -228,9 +231,12 @@ def _rows_to_instruments(rows: Iterable[dict]) -> Iterable[IndianInstrument]:
             yfinance_symbol=(row.get("yfinance_symbol") or "").strip().upper()
             or None,
             dhan_security_id=(row.get("dhan_security_id") or "").strip() or None,
+            tick_size=float(tick_size) if tick_size else 0.05,
+            lot_size=int(float(lot_size)) if lot_size else 1,
             sector=(row.get("sector") or "").strip() or None,
             benchmark=(row.get("benchmark") or "").strip() or DEFAULT_INDIAN_BENCHMARK,
             avg_daily_value_inr=float(avg_value) if avg_value else None,
+            active=str(active).strip().lower() not in {"0", "false", "no", "n"} if active is not None else True,
         )
 
 

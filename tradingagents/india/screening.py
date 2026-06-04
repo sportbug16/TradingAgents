@@ -22,6 +22,7 @@ RATINGS = ("Buy", "Overweight", "Hold", "Underweight", "Sell")
 class IndiaScreenDecision:
     ticker: str
     decision_date: str
+    horizon_sessions: int
     rating: str
     confidence: float
     thesis: str
@@ -66,7 +67,19 @@ def screen_provider(
                 **_client_kwargs(defaults),
             ).get_llm()
             decisions = [_screen_packet(client, provider, defaults["quick_model"], packet) for packet in packets]
-            result = provider_result(provider, "completed", [asdict(d) for d in decisions])
+            result = provider_result(
+                provider,
+                "completed",
+                [asdict(d) for d in decisions],
+                metadata={
+                    "llm_provider": defaults.get("llm_provider", provider),
+                    "model": defaults["quick_model"],
+                    "timeout_seconds": timeout_seconds,
+                    "llm_timeout": llm_timeout,
+                    "llm_max_retries": llm_max_retries,
+                    "call_count": len(packets),
+                },
+            )
     except TimeoutError as exc:
         result = provider_result(provider, "timeout", [], reason=str(exc))
     except Exception as exc:
@@ -111,8 +124,14 @@ def parse_screen_response(text: str) -> dict[str, Any]:
     }
 
 
-def provider_result(provider: str, status: str, decisions: list[dict[str, Any]], reason: str | None = None) -> dict[str, Any]:
-    return {
+def provider_result(
+    provider: str,
+    status: str,
+    decisions: list[dict[str, Any]],
+    reason: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload = {
         "provider": provider,
         "status": status,
         "reason": reason,
@@ -121,6 +140,9 @@ def provider_result(provider: str, status: str, decisions: list[dict[str, Any]],
         "error_count": len([d for d in decisions if d.get("error")]),
         "decisions": decisions,
     }
+    if metadata:
+        payload["metadata"] = metadata
+    return payload
 
 
 def _screen_packet(client, provider: str, model: str, packet: dict[str, Any]) -> IndiaScreenDecision:
@@ -130,6 +152,7 @@ def _screen_packet(client, provider: str, model: str, packet: dict[str, Any]) ->
         return IndiaScreenDecision(
             ticker=packet["ticker"],
             decision_date=packet["decision_date"],
+            horizon_sessions=int(packet["horizon_sessions"]),
             provider=provider,
             model=model,
             **parsed,
@@ -138,6 +161,7 @@ def _screen_packet(client, provider: str, model: str, packet: dict[str, Any]) ->
         return IndiaScreenDecision(
             ticker=packet["ticker"],
             decision_date=packet["decision_date"],
+            horizon_sessions=int(packet.get("horizon_sessions") or 0),
             provider=provider,
             model=model,
             rating="Hold",

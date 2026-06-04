@@ -1,5 +1,4 @@
 import pytest
-import pandas as pd
 import requests
 
 from tradingagents.dataflows.interface import route_to_vendor
@@ -8,7 +7,6 @@ from tradingagents.india.data import (
     IndianDataFrame,
     IndianDataProviderUnavailable,
     DataSnapshot,
-    YFinanceIndianProvider,
     create_indian_provider,
     dhan_intraday_chunks,
 )
@@ -144,6 +142,29 @@ def test_dhan_ohlcv_retries_rate_limit(tmp_path, monkeypatch):
 
 
 @pytest.mark.unit
+def test_dhan_benchmark_uses_index_segment(tmp_path):
+    session = _Session(
+        {
+            "timestamp": [1767312000],
+            "open": [24000],
+            "high": [24100],
+            "low": [23900],
+            "close": [24050],
+            "volume": [0],
+        }
+    )
+    provider = DhanHQProvider(access_token="token", cache_dir=tmp_path, session=session)
+
+    result = provider.get_benchmark_ohlcv("^NSEI", "2026-01-01", "2026-01-05")
+
+    assert result.snapshot.provider == "dhanhq"
+    assert result.snapshot.fallback_unofficial is False
+    assert session.calls[0]["json"]["securityId"] == "13"
+    assert session.calls[0]["json"]["exchangeSegment"] == "IDX_I"
+    assert session.calls[0]["json"]["instrument"] == "INDEX"
+
+
+@pytest.mark.unit
 def test_dhan_requires_security_id(tmp_path):
     provider = DhanHQProvider(access_token="token", cache_dir=tmp_path)
     instrument = IndianInstrumentRegistry().resolve("RELIANCE.BO")
@@ -152,22 +173,14 @@ def test_dhan_requires_security_id(tmp_path):
 
 
 @pytest.mark.unit
-def test_yfinance_indian_provider_is_labeled_unofficial(monkeypatch):
-    frame = pd.DataFrame(
-        [{"Date": "2026-01-02", "Open": 1, "High": 2, "Low": 1, "Close": 2, "Volume": 10}]
-    ).set_index("Date")
-    monkeypatch.setattr("tradingagents.india.data.yf.download", lambda *args, **kwargs: frame)
-    result = YFinanceIndianProvider().get_ohlcv(IndianInstrumentRegistry().resolve("RELIANCE.NS"), "2026-01-01", "2026-01-03")
-    assert result.snapshot.provider == "yfinance"
-    assert result.snapshot.fallback_unofficial is True
-
-
-@pytest.mark.unit
-def test_create_indian_provider_requires_explicit_fallback(monkeypatch):
+def test_create_indian_provider_is_dhan_only(monkeypatch):
     monkeypatch.delenv("DHAN_ACCESS_TOKEN", raising=False)
     with pytest.raises(IndianDataProviderUnavailable):
         create_indian_provider("dhan", allow_fallback=False)
-    assert create_indian_provider("dhan", allow_fallback=True).name == "yfinance"
+    with pytest.raises(IndianDataProviderUnavailable):
+        create_indian_provider("dhan", allow_fallback=True)
+    with pytest.raises(ValueError, match="yfinance is not supported"):
+        create_indian_provider("yfinance", allow_fallback=True)
 
 
 @pytest.mark.unit

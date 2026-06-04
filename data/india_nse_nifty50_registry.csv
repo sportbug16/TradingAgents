@@ -1,0 +1,51 @@
+symbol,exchange,isin,name,yfinance_symbol,dhan_security_id,sector,benchmark,avg_daily_value_inr,tick_size,lot_size,active
+ADANIENT,NSE,INE423A01024,Adani Enterprises Ltd.,ADANIENT.NS,25,Metals & Mining,^NSEI,,0.1,1,true
+ADANIPORTS,NSE,INE742F01042,Adani Ports and Special Economic Zone Ltd.,ADANIPORTS.NS,15083,Services,^NSEI,,0.1,1,true
+APOLLOHOSP,NSE,INE437A01024,Apollo Hospitals Enterprise Ltd.,APOLLOHOSP.NS,157,Healthcare,^NSEI,,0.5,1,true
+ASIANPAINT,NSE,INE021A01026,Asian Paints Ltd.,ASIANPAINT.NS,236,Consumer Durables,^NSEI,,0.1,1,true
+AXISBANK,NSE,INE238A01034,Axis Bank Ltd.,AXISBANK.NS,5900,Financial Services,^NSEI,,0.1,1,true
+BAJAJ-AUTO,NSE,INE917I01010,Bajaj Auto Ltd.,BAJAJ-AUTO.NS,16669,Automobile and Auto Components,^NSEI,,0.5,1,true
+BAJFINANCE,NSE,INE296A01032,Bajaj Finance Ltd.,BAJFINANCE.NS,317,Financial Services,^NSEI,,0.05,1,true
+BAJAJFINSV,NSE,INE918I01026,Bajaj Finserv Ltd.,BAJAJFINSV.NS,16675,Financial Services,^NSEI,,0.1,1,true
+BEL,NSE,INE263A01024,Bharat Electronics Ltd.,BEL.NS,383,Capital Goods,^NSEI,,0.05,1,true
+BHARTIARTL,NSE,INE397D01024,Bharti Airtel Ltd.,BHARTIARTL.NS,10604,Telecommunication,^NSEI,,0.1,1,true
+CIPLA,NSE,INE059A01026,Cipla Ltd.,CIPLA.NS,694,Healthcare,^NSEI,,0.1,1,true
+COALINDIA,NSE,INE522F01014,Coal India Ltd.,COALINDIA.NS,20374,Oil Gas & Consumable Fuels,^NSEI,,0.05,1,true
+DRREDDY,NSE,INE089A01031,Dr. Reddy's Laboratories Ltd.,DRREDDY.NS,881,Healthcare,^NSEI,,0.1,1,true
+EICHERMOT,NSE,INE066A01021,Eicher Motors Ltd.,EICHERMOT.NS,910,Automobile and Auto Components,^NSEI,,0.5,1,true
+ETERNAL,NSE,INE758T01015,Eternal Ltd.,ETERNAL.NS,5097,Consumer Services,^NSEI,,0.01,1,true
+GRASIM,NSE,INE047A01021,Grasim Industries Ltd.,GRASIM.NS,1232,Construction Materials,^NSEI,,0.1,1,true
+HCLTECH,NSE,INE860A01027,HCL Technologies Ltd.,HCLTECH.NS,7229,Information Technology,^NSEI,,0.1,1,true
+HDFCBANK,NSE,INE040A01034,HDFC Bank Ltd.,HDFCBANK.NS,1333,Financial Services,^NSEI,,0.05,1,true
+HDFCLIFE,NSE,INE795G01014,HDFC Life Insurance Company Ltd.,HDFCLIFE.NS,467,Financial Services,^NSEI,,0.05,1,true
+HINDALCO,NSE,INE038A01020,Hindalco Industries Ltd.,HINDALCO.NS,1363,Metals & Mining,^NSEI,,0.1,1,true
+HINDUNILVR,NSE,INE030A01027,Hindustan Unilever Ltd.,HINDUNILVR.NS,1394,Fast Moving Consumer Goods,^NSEI,,0.1,1,true
+ICICIBANK,NSE,INE090A01021,ICICI Bank Ltd.,ICICIBANK.NS,4963,Financial Services,^NSEI,,0.1,1,true
+ITC,NSE,INE154A01025,ITC Ltd.,ITC.NS,1660,Fast Moving Consumer Goods,^NSEI,,0.05,1,true
+INFY,NSE,INE009A01021,Infosys Ltd.,INFY.NS,1594,Information Technology,^NSEI,,0.1,1,true
+INDIGO,NSE,INE646L01027,InterGlobe Aviation Ltd.,INDIGO.NS,11195,Services,^NSEI,,0.1,1,true
+JSWSTEEL,NSE,INE019A01038,JSW Steel Ltd.,JSWSTEEL.NS,11723,Metals & Mining,^NSEI,,0.1,1,true
+JIOFIN,NSE,INE758E01017,Jio Financial Services Ltd.,JIOFIN.NS,18143,Financial Services,^NSEI,,0.01,1,true
+KOTAKBANK,NSE,INE237A01036,Kotak Mahindra Bank Ltd.,KOTAKBANK.NS,1922,Financial Services,^NSEI,,0.05,1,true
+LT,NSE,INE018A01030,Larsen & Toubro Ltd.,LT.NS,11483,Construction,^NSEI,,0.1,1,true
+M&M,NSE,INE101A01026,Mahindra & Mahindra Ltd.,M&M.NS,2031,Automobile and Auto Components,^NSEI,,0.1,1,true
+MARUTI,NSE,INE585B01010,Maruti Suzuki India Ltd.,MARUTI.NS,10999,Automobile and Auto Components,^NSEI,,1,1,true
+MAXHEALTH,NSE,INE027H01010,Max Healthcare Institute Ltd.,MAXHEALTH.NS,22377,Healthcare,^NSEI,,0.05,1,true
+NTPC,NSE,INE733E01010,NTPC Ltd.,NTPC.NS,11630,Power,^NSEI,,0.05,1,true
+NESTLEIND,NSE,INE239A01024,Nestle India Ltd.,NESTLEIND.NS,17963,Fast Moving Consumer Goods,^NSEI,,0.1,1,true
+ONGC,NSE,INE213A01029,Oil & Natural Gas Corporation Ltd.,ONGC.NS,2475,Oil Gas & Consumable Fuels,^NSEI,,0.05,1,true
+POWERGRID,NSE,INE752E01010,Power Grid Corporation of India Ltd.,POWERGRID.NS,14977,Power,^NSEI,,0.05,1,true
+RELIANCE,NSE,INE002A01018,Reliance Industries Ltd.,RELIANCE.NS,2885,Oil Gas & Consumable Fuels,^NSEI,,0.1,1,true
+SBILIFE,NSE,INE123W01016,SBI Life Insurance Company Ltd.,SBILIFE.NS,21808,Financial Services,^NSEI,,0.1,1,true
+SHRIRAMFIN,NSE,INE721A01047,Shriram Finance Ltd.,SHRIRAMFIN.NS,4306,Financial Services,^NSEI,,0.05,1,true
+SBIN,NSE,INE062A01020,State Bank of India,SBIN.NS,3045,Financial Services,^NSEI,,0.1,1,true
+SUNPHARMA,NSE,INE044A01036,Sun Pharmaceutical Industries Ltd.,SUNPHARMA.NS,3351,Healthcare,^NSEI,,0.1,1,true
+TCS,NSE,INE467B01029,Tata Consultancy Services Ltd.,TCS.NS,11536,Information Technology,^NSEI,,0.1,1,true
+TATACONSUM,NSE,INE192A01025,Tata Consumer Products Ltd.,TATACONSUM.NS,3432,Fast Moving Consumer Goods,^NSEI,,0.1,1,true
+TMPV,NSE,INE155A01022,Tata Motors Passenger Vehicles Ltd.,TMPV.NS,3456,Automobile and Auto Components,^NSEI,,0.05,1,true
+TATASTEEL,NSE,INE081A01020,Tata Steel Ltd.,TATASTEEL.NS,3499,Metals & Mining,^NSEI,,0.01,1,true
+TECHM,NSE,INE669C01036,Tech Mahindra Ltd.,TECHM.NS,13538,Information Technology,^NSEI,,0.1,1,true
+TITAN,NSE,INE280A01028,Titan Company Ltd.,TITAN.NS,3506,Consumer Durables,^NSEI,,0.1,1,true
+TRENT,NSE,INE849A01020,Trent Ltd.,TRENT.NS,1964,Consumer Services,^NSEI,,0.1,1,true
+ULTRACEMCO,NSE,INE481G01011,UltraTech Cement Ltd.,ULTRACEMCO.NS,11532,Construction Materials,^NSEI,,1,1,true
+WIPRO,NSE,INE075A01022,Wipro Ltd.,WIPRO.NS,3787,Information Technology,^NSEI,,0.01,1,true
